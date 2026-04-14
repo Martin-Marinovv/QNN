@@ -1,0 +1,58 @@
+name: Update Playlist
+
+# Triggers whenever you publish a new GitHub Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-playlist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit playlist.json back to the repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Extract MP4 URLs from release assets
+        id: get_urls
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release = context.payload.release;
+            const mp4s = release.assets
+              .filter(a => a.name.toLowerCase().endsWith('.mp4'))
+              .map(a => a.browser_download_url);
+            console.log('Found MP4 assets:', mp4s);
+            return mp4s;
+          result-encoding: json
+
+      - name: Append new URLs to playlist.json
+        run: |
+          # Read existing playlist (default to empty array if file missing)
+          if [ -f playlist.json ]; then
+            CURRENT=$(cat playlist.json)
+          else
+            CURRENT='[]'
+          fi
+
+          NEW_URLS='${{ steps.get_urls.outputs.result }}'
+
+          # Merge arrays, remove duplicates, keep order (existing first)
+          echo "$CURRENT" | jq \
+            --argjson new "$NEW_URLS" \
+            '. + $new | unique' \
+            > playlist.json
+
+          echo "Updated playlist.json:"
+          cat playlist.json
+
+      - name: Commit and push playlist.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add playlist.json
+          # Only commit if the file actually changed
+          git diff --staged --quiet || git commit -m "chore: add ${{ github.event.release.tag_name }} videos to playlist"
+          git push
