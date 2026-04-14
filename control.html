@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QNN · Broadcast Control</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#060d0d;color:#00d0ac;font-family:'Courier New',monospace;min-height:100vh;padding:22px;}
+.qnn-header{display:flex;align-items:baseline;gap:14px;margin-bottom:20px;border-bottom:1px solid rgba(0,205,170,.1);padding-bottom:12px;}
+.qnn-header-logo{font-size:28px;font-weight:900;letter-spacing:.2em;color:#00d0ac;text-shadow:0 0 16px rgba(0,208,172,.4);}
+.qnn-header-sub{font-size:9px;letter-spacing:.18em;color:rgba(0,205,170,.4);}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;max-width:700px;}
+.card{background:rgba(0,205,170,.03);border:1px solid rgba(0,205,170,.12);border-radius:7px;padding:15px;}
+.card h2{font-size:8px;letter-spacing:.16em;color:rgba(0,205,170,.4);margin-bottom:12px;}
+.field{margin-bottom:10px;}
+.field label{display:block;font-size:8px;color:rgba(0,205,170,.42);letter-spacing:.07em;margin-bottom:3px;}
+.field input{width:100%;background:rgba(0,205,170,.05);border:1px solid rgba(0,205,170,.16);border-radius:3px;color:#00d0ac;font-family:'Courier New',monospace;font-size:13px;padding:6px 9px;outline:none;}
+.field input:focus{border-color:rgba(0,205,170,.42);}
+.hint{font-size:8px;color:rgba(0,205,170,.27);margin-top:3px;line-height:1.6;}
+.btn{width:100%;padding:9px;border-radius:5px;font-family:'Courier New',monospace;font-size:11px;letter-spacing:.09em;cursor:pointer;border:none;margin-bottom:6px;}
+.bp{background:rgba(0,205,170,.11);color:#00d0ac;border:1px solid rgba(0,205,170,.32);}
+.bp:hover{background:rgba(0,205,170,.2);}
+.bn{background:rgba(255,255,255,.04);color:rgba(255,255,255,.38);border:1px solid rgba(255,255,255,.08);}
+.bn:hover{background:rgba(255,255,255,.09);}
+.url{background:rgba(0,0,0,.45);border:1px solid rgba(0,205,170,.1);border-radius:4px;padding:9px 10px;font-size:9px;color:rgba(0,205,170,.52);word-break:break-all;margin-bottom:9px;min-height:42px;line-height:1.7;}
+.cr{display:flex;justify-content:space-between;font-size:9px;color:rgba(0,205,170,.42);margin-bottom:3px;}
+.cv{color:rgba(0,205,170,.88);}
+.dv{height:1px;background:rgba(0,205,170,.08);margin:11px 0;}
+.cp{font-size:9px;padding:4px 10px;background:rgba(0,205,170,.08);border:1px solid rgba(0,205,170,.2);border-radius:3px;color:#00d0ac;cursor:pointer;font-family:'Courier New',monospace;margin-right:5px;}
+.cp:hover{background:rgba(0,205,170,.17);}
+.note{font-size:9px;line-height:1.9;padding:9px;border:1px solid rgba(0,205,170,.1);border-radius:4px;background:rgba(0,205,170,.02);color:rgba(0,205,170,.45);margin-bottom:8px;}
+.note b{color:#00d0ac;}
+.warn{font-size:9px;color:rgba(255,170,0,.58);line-height:1.7;padding:8px;border:1px solid rgba(255,170,0,.13);border-radius:4px;background:rgba(255,170,0,.03);}
+.section-title{font-size:8px;letter-spacing:.16em;color:rgba(0,205,170,.4);margin:14px 0 8px;}
+.flow-box{font-size:9px;color:rgba(0,205,170,.5);line-height:2;padding:9px 10px;border:1px solid rgba(0,205,170,.08);border-radius:4px;background:rgba(0,205,170,.015);font-family:'Courier New',monospace;}
+.flow-box b{color:rgba(0,205,170,.88);}
+.flow-box .dim{color:rgba(0,205,170,.28);}
+</style>
+</head>
+<body>
+
+<div class="qnn-header">
+  <span class="qnn-header-logo">QNN</span>
+  <span class="qnn-header-sub">QUANTUM NEWS NETWORK · BROADCAST CONTROL</span>
+</div>
+
+<div class="grid">
+
+  <!-- TIMING CARD -->
+  <div class="card">
+    <h2>TIMING</h2>
+
+    <div class="field">
+      <label>QNN STANDBY DURATION (seconds)</label>
+      <input type="number" id="m" value="320" min="10" max="86400">
+      <div class="hint">How long the QNN screen shows between broadcasts.</div>
+    </div>
+
+    <div class="field">
+      <label>!APPLY MESSAGE DURATION (seconds)</label>
+      <input type="number" id="oi" value="60" min="5" max="3600">
+      <div class="hint">OI !apply screen duration — applies in both video and no-video mode.</div>
+    </div>
+
+    <div class="field">
+      <label>VIDEO PRE-ROLL FREEZE (seconds)</label>
+      <input type="number" id="preroll" value="5" min="0" max="30">
+      <div class="hint">First frame frozen for this many seconds before playback starts.</div>
+    </div>
+
+    <div class="field">
+      <label>VIDEO POST-ROLL FREEZE (seconds)</label>
+      <input type="number" id="postroll" value="5" min="0" max="30">
+      <div class="hint">Last frame frozen for this many seconds after playback ends.</div>
+    </div>
+
+    <div class="field">
+      <label>CRT FLASH INTERVAL (seconds, 0 = disabled)</label>
+      <input type="number" id="i" value="0" min="0" max="86400">
+      <div class="hint" id="hi">Periodic CRT static flash during QNN phase. Set 0 to disable.</div>
+    </div>
+
+    <div class="field">
+      <label>CRT FLASH DURATION (seconds)</label>
+      <input type="number" id="c" value="1" min="1" max="10">
+    </div>
+
+    <div class="field">
+      <label>PER-VIDEO SAFETY TIMEOUT (seconds)</label>
+      <input type="number" id="v" value="600" min="30" max="86400">
+      <div class="hint">Fallback only — videos play to natural end. Only fires if video.ended never triggers.</div>
+    </div>
+
+    <div class="dv"></div>
+
+    <div class="cr"><span>QNN standby per cycle</span><span class="cv" id="cqnn">320s</span></div>
+    <div class="cr"><span>!apply duration</span><span class="cv" id="coi">60s</span></div>
+    <div class="cr"><span>Pre-roll freeze</span><span class="cv" id="cpre">5s</span></div>
+    <div class="cr"><span>Post-roll freeze</span><span class="cv" id="cpost">5s</span></div>
+    <div class="cr"><span>CRT flash interval</span><span class="cv" id="cci">disabled</span></div>
+  </div>
+
+  <!-- URL CARD -->
+  <div class="card">
+    <h2>BROWSER SOURCE URL</h2>
+    <p style="font-size:9px;color:rgba(0,205,170,.32);margin-bottom:10px;line-height:1.8;">Generate → paste into OBS Browser Source → Refresh.</p>
+    <div class="url" id="url">—</div>
+    <div style="margin-bottom:10px;">
+      <button class="cp" onclick="copy()">Copy URL</button>
+      <button class="cp" onclick="prev()">Preview</button>
+    </div>
+    <button class="btn bp" onclick="gen()">▶ Generate URL</button>
+    <div class="dv"></div>
+    <h2>QUICK PRESETS</h2>
+    <button class="btn bn" onclick="ps(320,60,5,5,0,1,600)">Default  (320s standby, 60s !apply, 5s freeze)</button>
+    <button class="btn bn" onclick="ps(600,60,5,5,0,1,600)">10 min standby</button>
+    <button class="btn bn" onclick="ps(1800,60,5,5,0,1,600)">30 min standby</button>
+    <button class="btn bn" onclick="ps(7200,60,5,5,0,1,600)">2 hour standby</button>
+    <button class="btn bn" onclick="ps(30,15,3,3,0,1,600)">Test  (30s standby, 15s !apply, 3s freeze)</button>
+    <div class="dv"></div>
+    <div class="warn">⚠ AUDIO: right-click Browser Source → Properties → tick <b>"Control audio via OBS"</b>. Eye icon will also mute audio.</div>
+  </div>
+
+  <!-- FULL-WIDTH REFERENCE CARD -->
+  <div class="card" style="grid-column:1/-1">
+
+    <h2>BROADCAST FLOW REFERENCE</h2>
+    <div class="flow-box">
+      <b>WITH VIDEOS:</b><br>
+      <span class="dim">┌─</span> QNN standby <span class="dim">(msg s)</span>
+        → <span class="dim">[CRT]</span>
+        → First frame frozen <span class="dim">(preroll s)</span>
+        → Video plays to end
+        → Last frame frozen <span class="dim">(postroll s)</span>
+        → <span class="dim">[CRT]</span>
+        → !apply <span class="dim">(oi s)</span>
+        → <span class="dim">[CRT]</span>
+        → QNN standby → next video … <span class="dim">(loops)</span><br>
+      <br>
+      <b>NO VIDEOS</b> <span class="dim">(all PLAYLIST entries commented out):</span><br>
+      <span class="dim">┌─</span> QNN standby <span class="dim">(msg s)</span>
+        → <span class="dim">[CRT]</span>
+        → !apply <span class="dim">(oi s)</span>
+        → <span class="dim">[CRT]</span>
+        → QNN standby … <span class="dim">(loops)</span><br>
+      <br>
+      <b>SCREEN GUARANTEE:</b> QNN or !apply always showing. CRT static only during transition flashes.
+    </div>
+
+    <div class="dv"></div>
+    <h2>ASSETS — assets/ folder</h2>
+    <div class="note">
+      <b>assets/terminal-frame.png</b> — frame overlay, must be 1920×1080px. Transparent centre reveals panels and video.<br>
+      <b>assets/broadcast-01.mp4</b> … <b>broadcast-06.mp4</b> — your video files. Edit the <b>PLAYLIST</b> array at the top of <b>index.html</b> to match your filenames. Videos play in order to their natural end. Comment ALL entries out to run in no-video mode.
+    </div>
+
+    <h2>SETUP GUIDE</h2>
+    <div style="font-size:9px;color:rgba(0,205,170,.38);line-height:2;display:grid;grid-template-columns:1fr 1fr;gap:0 28px;">
+      <div>1. Add <span style="color:#00d0ac">assets/terminal-frame.png</span></div>
+      <div>5. Set OBS browser source to <span style="color:#00d0ac">1920 × 1080</span></div>
+      <div>2. Add video files as <span style="color:#00d0ac">broadcast-01.mp4</span> etc.</div>
+      <div>6. Right-click → Properties → tick <span style="color:#00d0ac">Control audio via OBS</span></div>
+      <div>3. Edit PLAYLIST in <span style="color:#00d0ac">index.html</span> with your filenames</div>
+      <div>7. Adjust timing → Generate URL → paste → Refresh</div>
+      <div>4. Push to GitHub → Settings → Pages → main branch</div>
+      <div>8. Eye icon hides visuals AND mutes audio</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const BASE = window.location.href.replace('control.html','index.html').split('?')[0];
+const $ = id => document.getElementById(id);
+
+function vals() {
+  return {
+    m       : +$('m').value       || 320,
+    oi      : +$('oi').value      || 60,
+    preroll : +$('preroll').value,   // 0 is valid
+    postroll: +$('postroll').value,  // 0 is valid
+    i       : +$('i').value,         // 0 = disabled
+    c       : +$('c').value        || 1,
+    v       : +$('v').value        || 600,
+  };
+}
+
+function calc() {
+  const {m, oi, preroll, postroll, i} = vals();
+  $('cqnn').textContent  = m + 's';
+  $('coi').textContent   = oi + 's';
+  $('cpre').textContent  = preroll + 's';
+  $('cpost').textContent = postroll + 's';
+  $('cci').textContent   = i > 0 ? i + 's' : 'disabled';
+  $('hi').textContent    = i > 0
+    ? 'CRT flash every ' + i + 's during QNN phase.'
+    : 'Set above 0 to enable periodic CRT flashes during QNN phase.';
+}
+
+function gen() {
+  const {m, oi, preroll, postroll, i, c, v} = vals();
+  const url = `${BASE}?msg=${m}&oi=${oi}&preroll=${preroll}&postroll=${postroll}&interval=${i}&crt=${c}&vidmax=${v}`;
+  $('url').textContent = url;
+  calc();
+  return url;
+}
+
+function copy() {
+  navigator.clipboard.writeText(gen()).then(() => {
+    const b = event.target;
+    b.textContent = 'Copied!';
+    setTimeout(() => b.textContent = 'Copy URL', 1500);
+  });
+}
+
+function prev() { window.open(gen(), '_blank'); }
+
+function ps(m, oi, preroll, postroll, i, c, v) {
+  $('m').value = m; $('oi').value = oi;
+  $('preroll').value = preroll; $('postroll').value = postroll;
+  $('i').value = i; $('c').value = c; $('v').value = v;
+  gen();
+}
+
+['m','oi','preroll','postroll','i','c','v'].forEach(id => $(id).addEventListener('input', calc));
+calc(); gen();
+</script>
+</body>
+</html>

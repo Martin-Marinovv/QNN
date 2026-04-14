@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QNN — Quantum News Network</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#000; }
+
+#wrap {
+  width:1920px; height:1080px;
+  transform-origin:top left;
+  position:absolute; top:0; left:0;
+  font-family:'Courier New',monospace;
+}
+#screen { position:absolute; inset:0; display:flex; overflow:hidden; background:#020c0c; }
+
+#frame-overlay {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:fill; pointer-events:none; z-index:50; display:block;
+}
+#frame-overlay[src="assets/terminal-frame.png"]:not([complete]) { opacity:0; }
+
+#flash {
+  position:absolute; inset:0; z-index:60;
+  background:rgba(0,205,170,.16);
+  opacity:0; pointer-events:none; transition:opacity .08s;
+}
+
+/* ════ DATA PANELS ════ */
+.data-panel {
+  width:310px; height:100%;
+  background:rgba(0,6,5,0.88);
+  flex-shrink:0; position:relative; overflow:hidden; z-index:1;
+}
+.data-panel.L { border-right:1px solid rgba(0,180,155,.1); }
+.data-panel.R { border-left:1px solid rgba(0,180,155,.1); }
+.pnoise { position:absolute; inset:0; opacity:.032; z-index:1; pointer-events:none; }
+.pscan  { position:absolute; inset:0; background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.13) 2px,rgba(0,0,0,.13) 3px); pointer-events:none; z-index:2; }
+.pglitch { position:absolute;inset:0;z-index:3;background:rgba(0,250,195,.02);opacity:0;pointer-events:none;animation:pGlitch 12s linear infinite; }
+@keyframes pGlitch{0%,100%{opacity:0}94%{opacity:0;transform:none}95%{opacity:1;transform:translateX(2px)}96%{opacity:0}}
+.pin { position:relative;z-index:5;padding:13px 11px;height:100%;display:flex;flex-direction:column;gap:9px; }
+.pblock { border:1px solid rgba(0,190,160,.16);padding:7px 8px;position:relative;background:rgba(0,190,160,.02);flex-shrink:0; }
+.pblock.grow { flex:1;overflow:hidden; }
+.pblock::before { content:attr(data-label);position:absolute;top:-7px;left:7px;font-size:8px;color:rgba(0,190,160,.58);background:rgba(0,6,5,.96);padding:0 4px;letter-spacing:.13em; }
+.pbar { display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;border-bottom:1px solid rgba(0,190,160,.1);margin-bottom:3px; }
+.pdot { width:5px;height:5px;border-radius:50%;background:rgba(0,190,160,.85);display:inline-block;margin-right:5px;animation:pdP 2s ease-in-out infinite; }
+@keyframes pdP{0%,100%{opacity:1}50%{opacity:.2}}
+.ptxt { font-size:8px;color:rgba(0,190,160,.52);letter-spacing:.1em; }
+.dl   { font-size:9px;color:rgba(0,190,160,.68);letter-spacing:.04em;line-height:1.5;white-space:nowrap;overflow:hidden; }
+.dl.d { color:rgba(0,190,160,.28); }
+.dl.b { color:rgba(0,255,195,1); }
+.dl.w { color:rgba(255,170,0,.82); }
+.dl.h { color:rgba(0,165,255,.52);font-size:8px; }
+.dl.e { color:rgba(255,50,50,.78); }
+.sw { overflow:hidden;height:100%; }
+.st { display:flex;flex-direction:column;gap:2px;animation:scrollUp linear infinite; }
+@keyframes scrollUp{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+.sr { display:flex;align-items:center;gap:4px;margin-bottom:3px; }
+.sl { font-size:8px;color:rgba(0,190,160,.5);width:56px;letter-spacing:.04em; }
+.sb { display:flex;gap:2px; }
+.sbar { width:5px;height:10px;background:rgba(0,190,160,.1); }
+.sbar.on { background:rgba(0,190,160,.8); }
+.gr { display:flex;align-items:center;gap:5px;margin-bottom:4px; }
+.gl { font-size:8px;color:rgba(0,190,160,.5);width:56px;letter-spacing:.04em; }
+.gt { flex:1;height:4px;background:rgba(0,190,160,.08); }
+.gf { height:100%;background:rgba(0,190,160,.7);transition:width 2.2s ease; }
+.gv { font-size:8px;color:rgba(0,190,160,.75);width:25px;text-align:right; }
+.hg { display:flex;flex-wrap:wrap;gap:2px;padding:2px 0; }
+.hc { width:13px;height:13px;background:rgba(0,190,160,.04);border:1px solid rgba(0,190,160,.09);font-size:6px;color:rgba(0,190,160,.38);display:flex;align-items:center;justify-content:center; }
+
+/* ════ QNN SIDEBAR IDENT ════ */
+.qnn-ident { display:flex;flex-direction:column;align-items:flex-start;padding:6px 0 4px 0;border-bottom:1px solid rgba(0,190,160,.15);margin-bottom:2px;flex-shrink:0; }
+.qnn-ident-mark    { font-size:9px;color:rgba(0,190,160,.4);letter-spacing:.18em;margin-bottom:2px; }
+.qnn-ident-letters { font-size:26px;font-weight:900;letter-spacing:.22em;color:#00d0ac;text-shadow:0 0 18px rgba(0,208,172,.45),0 0 6px rgba(0,208,172,.3);line-height:1;animation:qnnPulse 4s ease-in-out infinite; }
+@keyframes qnnPulse{0%,100%{text-shadow:0 0 18px rgba(0,208,172,.45),0 0 6px rgba(0,208,172,.3)}50%{text-shadow:0 0 28px rgba(0,208,172,.75),0 0 10px rgba(0,208,172,.5)}}
+.qnn-ident-name    { font-size:7px;color:rgba(0,190,160,.55);letter-spacing:.16em;margin-top:3px; }
+.qnn-ident-tagline { font-size:6.5px;color:rgba(0,190,160,.32);letter-spacing:.12em;margin-top:1px; }
+
+/* ════ CENTER ════ */
+#center { flex:1;position:relative;overflow:hidden;background:#020c0c;z-index:1; }
+.layer { position:absolute;inset:0;opacity:0;transition:opacity .12s ease;pointer-events:none; }
+.layer.on { opacity:1; }
+
+/* ── Message layer: two panels, strictly one visible at a time ── */
+#lMsg { z-index:2; }
+.msg-panel {
+  position:absolute;inset:0 0 30px 0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .4s ease;
+}
+.msg-panel.hidden { opacity:0; pointer-events:none; }
+
+/* QNN standby */
+.qnn-standby-mark {
+  font-size:28px;color:rgba(0,208,172,.35);letter-spacing:.5em;
+  margin-bottom:8px;animation:markSpread 10s ease-in-out infinite;
+}
+@keyframes markSpread{0%,100%{letter-spacing:.3em;opacity:.35}50%{letter-spacing:.8em;opacity:.6}}
+.qnn-standby-letters {
+  font-size:270px;font-weight:900;letter-spacing:.2em;color:#00d0ac;line-height:1;
+  text-shadow:0 0 60px rgba(0,208,172,.45),0 0 120px rgba(0,208,172,.16);
+  animation:logoBreath 6s ease-in-out infinite;
+}
+@keyframes logoBreath{
+  0%,100%{text-shadow:0 0 50px rgba(0,208,172,.4),0 0 100px rgba(0,208,172,.14)}
+  50%{text-shadow:0 0 80px rgba(0,208,172,.65),0 0 160px rgba(0,208,172,.25)}
+}
+.qnn-standby-name    { font-size:26px;color:rgba(0,190,160,.55);letter-spacing:.35em;margin-top:10px; }
+.qnn-standby-tagline { font-size:14px;color:rgba(0,190,160,.3);letter-spacing:.22em;margin-top:8px;animation:tagBlink 3.5s ease-in-out infinite; }
+@keyframes tagBlink{0%,100%{opacity:.3}50%{opacity:.55}}
+.qnn-standby-status  { font-size:11px;color:rgba(0,190,160,.4);letter-spacing:.18em;margin-top:22px;display:flex;align-items:center;gap:9px; }
+.qnn-rec-dot { width:7px;height:7px;border-radius:50%;background:#00d0ac;animation:recPulse 1.2s ease-in-out infinite; }
+@keyframes recPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.6)}}
+
+/* OI promo */
+.mline     { font-size:108px;color:#00d0ac;letter-spacing:.06em;line-height:1.75;text-align:center;text-shadow:0 0 22px rgba(0,205,170,.3);animation:mF 9s ease-in-out infinite; }
+.mline.sub { font-size:69px;color:rgba(0,205,170,.58);margin-top:10px;animation-delay:.5s; }
+@keyframes mF{0%,96%,100%{opacity:1}98%{opacity:.8}}
+
+/* Ticker */
+.ticker { position:absolute;bottom:0;left:0;right:0;height:30px;background:rgba(0,70,60,.13);border-top:1px solid rgba(0,190,160,.15);overflow:hidden;display:flex;align-items:center; }
+.ttrack { display:flex;white-space:nowrap;animation:tS 42s linear infinite; }
+.titem  { font-size:11px;color:rgba(0,200,170,.78);letter-spacing:.07em;padding:0 44px; }
+.tsep   { font-size:11px;color:rgba(0,200,170,.27);padding:0 14px; }
+@keyframes tS{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── Video layer ── */
+#lVid { background:#000;z-index:3;position:absolute;inset:0; }
+#bvid { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;filter:saturate(0.82) contrast(1.06) brightness(0.9); }
+.vid-scan     { position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.18) 3px,rgba(0,0,0,0.18) 4px);pointer-events:none;z-index:5; }
+.vid-vignette { position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,0.72) 100%);pointer-events:none;z-index:6; }
+.vid-tint     { position:absolute;inset:0;background:rgba(0,180,160,0.06);pointer-events:none;z-index:7; }
+.vchrome { position:absolute;left:0;right:0;display:flex;justify-content:space-between;align-items:center;font-size:9px;color:rgba(0,195,165,.45);letter-spacing:.1em;padding:0 10px;z-index:10; }
+.vchrome.t { top:7px; } .vchrome.b { bottom:7px; }
+.txd { width:5px;height:5px;border-radius:50%;background:#00d0ac;display:inline-block;margin-right:5px;animation:txP 1s ease-in-out infinite; }
+@keyframes txP{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.5)}}
+.qnn-watermark { position:absolute;top:14px;right:14px;font-size:13px;letter-spacing:.22em;color:rgba(0,208,172,.22);z-index:9;pointer-events:none; }
+
+/* ── CRT layer ── */
+#lCRT { z-index:10;background:#000; }
+#crtC { position:absolute;inset:0;width:100%;height:100%; }
+.crtL { position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.52) 2px,rgba(0,0,0,.52) 4px);z-index:5; }
+.crtV { position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,.96) 100%);z-index:6; }
+.crtF { position:absolute;inset:0;background:rgba(0,155,135,.04);z-index:7;animation:cF .07s step-end infinite; }
+@keyframes cF{0%{opacity:1}33%{opacity:.6}66%{opacity:1}100%{opacity:.8}}
+
+/* ── INTRO IFRAME — covers full 1920×1080, above everything ── */
+#intro-frame {
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  border:none;z-index:55;
+  display:none;background:#000;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="screen">
+
+    <!-- LEFT PANEL -->
+    <div class="data-panel L">
+      <canvas class="pnoise" id="pnL"></canvas>
+      <div class="pscan"></div><div class="pglitch"></div>
+      <div class="pin">
+        <div class="qnn-ident">
+          <div class="qnn-ident-mark">◈ STATION IDENT ◈</div>
+          <div class="qnn-ident-letters">QNN</div>
+          <div class="qnn-ident-name">QUANTUM NEWS NETWORK</div>
+          <div class="qnn-ident-tagline">SIGNAL FROM EVERY SECTOR</div>
+        </div>
+        <div class="pbar">
+          <span><span class="pdot"></span><span class="ptxt">SYS ONLINE</span></span>
+          <span class="ptxt" id="clkP">00:00:00</span>
+        </div>
+        <div class="pblock" data-label="COMM SIGNAL">
+          <div class="sr"><span class="sl">UPLINK</span><div class="sb" id="sUp"></div></div>
+          <div class="sr"><span class="sl">DOWNLINK</span><div class="sb" id="sDn"></div></div>
+          <div class="sr"><span class="sl">QUANTUM</span><div class="sb" id="sQu"></div></div>
+        </div>
+        <div class="pblock" data-label="SYS RESOURCES">
+          <div class="gr"><span class="gl">CPU LOAD</span><div class="gt"><div class="gf" id="gCpu" style="width:72%"></div></div><span class="gv" id="gvCpu">72%</span></div>
+          <div class="gr"><span class="gl">MEM ALLOC</span><div class="gt"><div class="gf" id="gMem" style="width:58%"></div></div><span class="gv" id="gvMem">58%</span></div>
+          <div class="gr"><span class="gl">NET I/O</span><div class="gt"><div class="gf" id="gNet" style="width:34%"></div></div><span class="gv" id="gvNet">34%</span></div>
+          <div class="gr"><span class="gl">ENC KEY</span><div class="gt"><div class="gf" id="gEnc" style="width:91%"></div></div><span class="gv" id="gvEnc">91%</span></div>
+        </div>
+        <div class="pblock grow" data-label="DATA STREAM">
+          <div class="sw"><div class="st" id="stL" style="animation-duration:16s;"></div></div>
+        </div>
+        <div class="pblock" data-label="SECTOR MAP">
+          <div class="hg" id="hxL"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div id="center">
+
+      <!-- MESSAGE LAYER -->
+      <div id="lMsg" class="layer on">
+        <!-- Panel A: QNN Standby (default) -->
+        <div id="pQNN" class="msg-panel">
+          <div class="qnn-standby-mark">◈ · · · ◈</div>
+          <div class="qnn-standby-letters">QNN</div>
+          <div class="qnn-standby-name">QUANTUM NEWS NETWORK</div>
+          <div class="qnn-standby-tagline">SIGNAL FROM EVERY SECTOR</div>
+          <div class="qnn-standby-status">
+            <span class="qnn-rec-dot"></span>
+            <span id="standbyLabel">STAND BY FOR BROADCAST</span>
+          </div>
+        </div>
+
+        <!-- Panel B: OI Promo — never shown at the same time as Panel A -->
+        <div id="pOI" class="msg-panel hidden">
+          <div class="mline">JOIN<br>Odyssey Interstellar</div>
+          <div class="mline sub">Type  !apply  in chat<br>for briefing.</div>
+        </div>
+
+        <!-- Ticker always visible -->
+        <div class="ticker"><div class="ttrack" id="ttrack"></div></div>
+      </div>
+
+      <!-- VIDEO LAYER -->
+      <div id="lVid" class="layer">
+        <div class="vchrome t">
+          <span><span class="txd"></span>◈ QNN LIVE TRANSMISSION</span>
+          <span id="vidTimer">00:00</span>
+        </div>
+        <div class="qnn-watermark">◈ QNN</div>
+        <video id="bvid" playsinline preload="auto"></video>
+        <div class="vid-scan"></div><div class="vid-vignette"></div><div class="vid-tint"></div>
+        <div class="vchrome b">
+          <span>QNN · QUANTUM NEWS NETWORK · STANTON BUREAU</span>
+          <span id="segCounter">SEG 1 / 1</span>
+        </div>
+      </div>
+
+      <!-- CRT LAYER -->
+      <div id="lCRT" class="layer">
+        <canvas id="crtC"></canvas>
+        <div class="crtL"></div><div class="crtV"></div><div class="crtF"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="data-panel R">
+      <canvas class="pnoise" id="pnR"></canvas>
+      <div class="pscan"></div>
+      <div class="pglitch" style="animation-delay:-5s"></div>
+      <div class="pin">
+        <div class="pbar">
+          <span class="ptxt">STANTON SYS</span>
+          <span><span class="ptxt">ENCRYPTED</span><span class="pdot" style="margin-left:5px;margin-right:0;background:rgba(255,170,0,.9)"></span></span>
+        </div>
+        <div class="pblock" data-label="IDENT PROTOCOL">
+          <div class="dl b">CLEARANCE : BROADCAST-A</div>
+          <div class="dl">STATION   : <span id="stationId">QNN-STN-001</span></div>
+          <div class="dl d">AUTH      : BIOMETRIC</div>
+          <div class="dl w">STATUS    : ACTIVE SESSION</div>
+          <div class="dl d">PROTOCOL  : TLS-QE/256</div>
+        </div>
+        <div class="pblock" data-label="VOICE ANALYSIS">
+          <div style="height:26px;overflow:hidden;">
+            <svg id="wave" viewBox="0 0 288 26" preserveAspectRatio="none" style="width:100%;height:26px;"></svg>
+          </div>
+        </div>
+        <div class="pblock grow" data-label="ACTIVITY LOG">
+          <div class="sw"><div class="st" id="stR" style="animation-duration:20s;"></div></div>
+        </div>
+        <div class="pblock" data-label="FREQ SPECTRUM">
+          <div class="hg" id="hxR"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+  <img id="frame-overlay" src="assets/terminal-frame.png" alt="">
+  <div id="flash"></div>
+
+  <!-- QNN intro — loaded fresh before each video, removed on completion -->
+  <iframe id="intro-frame" src="" allow="autoplay"></iframe>
+
+</div><!-- /wrap -->
+
+<script>
+// ════════════════════════════════════════════════════════
+//  RESPONSIVE SCALING
+// ════════════════════════════════════════════════════════
+function rescale() {
+  const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  const w = document.getElementById('wrap');
+  w.style.transform = `scale(${s})`;
+  w.style.left = Math.round((window.innerWidth  - 1920 * s) / 2) + 'px';
+  w.style.top  = Math.round((window.innerHeight - 1080 * s) / 2) + 'px';
+}
+window.addEventListener('resize', rescale);
+rescale();
+
+// ════════════════════════════════════════════════════════
+//  PLAYLIST — loaded from playlist.json at startup.
+//  Edit playlist.json to add/remove videos — never touch
+//  this file. The playlist also refreshes automatically
+//  at the start of each new full cycle, so newly added
+//  videos are picked up without reloading the page.
+// ════════════════════════════════════════════════════════
+let PLAYLIST   = [];
+let HAS_VIDEOS = false;
+let videoIdx   = 0;
+
+async function loadPlaylist(isRefresh) {
+  try {
+    // Cache-bust so GitHub Pages always serves the latest version
+    const res  = await fetch('playlist.json?t=' + Date.now());
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      PLAYLIST   = data;
+      HAS_VIDEOS = true;
+    } else {
+      PLAYLIST   = [];
+      HAS_VIDEOS = false;
+    }
+  } catch(e) {
+    console.warn('[QNN] Could not load playlist.json — running in no-video mode.', e);
+    PLAYLIST   = [];
+    HAS_VIDEOS = false;
+  }
+  // On first load, start the broadcast cycle
+  if (!isRefresh) setTimeout(startCycle, 500);
+}
+
+// Refresh playlist silently at the start of each new cycle
+// so newly published releases are picked up automatically
+function refreshPlaylist() { loadPlaylist(true); }
+
+// ════════════════════════════════════════════════════════
+//  CONFIG  (URL params — set via control.html)
+//
+//  msg       QNN standby duration (s)
+//  oi        OI !apply duration (s) — used in BOTH video and no-video mode
+//  interval  CRT periodic flash interval (s, 0 = disabled)
+//  crt       CRT flash transition duration (s)
+//  vidmax    Per-video safety timeout (s) — fallback only
+//  preroll   Freeze duration BEFORE video plays (s)
+//  postroll  Freeze duration AFTER video ends (s)
+// ════════════════════════════════════════════════════════
+const P = new URLSearchParams(window.location.search);
+const CFG = {
+  msgMs      : (parseInt(P.get('msg'))      || 320) * 1000,
+  oiMs       : (parseInt(P.get('oi'))       || 60)  * 1000,
+  intervalMs : (parseInt(P.get('interval')) || 0)   * 1000,  // 0 = disabled
+  crtMs      : (parseFloat(P.get('crt'))   || 1)    * 1000,
+  vidMaxMs   : (parseInt(P.get('vidmax'))  || 600)  * 1000,
+  prerollMs  : (parseInt(P.get('preroll')) || 5)    * 1000,
+  postrollMs : (parseInt(P.get('postroll'))|| 5)    * 1000,
+};
+
+// ════════════════════════════════════════════════════════
+//  DOM
+// ════════════════════════════════════════════════════════
+const lMsg = document.getElementById('lMsg');
+const lVid = document.getElementById('lVid');
+const lCRT = document.getElementById('lCRT');
+const vid  = document.getElementById('bvid');
+const pQNN = document.getElementById('pQNN');
+const pOI  = document.getElementById('pOI');
+
+// ════════════════════════════════════════════════════════
+//  STATE MACHINE
+//
+//  WITH VIDEOS:
+//    qnn → distort_to_preroll → vid_preroll (frozen, prerollMs)
+//    → video (playing) → vid_postroll (frozen, postrollMs)
+//    → distort_to_oi → oi (oiMs) → distort_to_qnn → qnn → …
+//
+//  NO VIDEOS:
+//    qnn (msgMs) → distort_to_oi → oi (oiMs) → distort_to_qnn → qnn → …
+//
+//  Periodic CRT flash (distort_periodic) fires during QNN phase
+//  without resetting the QNN timer.
+//  Screen is ALWAYS showing content — CRT only during flash transitions.
+// ════════════════════════════════════════════════════════
+let state         = 'idle';
+let stateStart    = 0;
+let qnnAccum      = 0;    // accumulated QNN time, survives periodic CRT flashes
+let qnnPhaseStart = 0;    // when current QNN phase/sub-phase started
+let intervalStart = 0;    // reference point for next periodic CRT
+let tickH         = null;
+let vidTimerH     = null;
+
+function showCenter(name) {
+  lMsg.classList.toggle('on', name === 'msg');
+  lVid.classList.toggle('on', name === 'vid');
+  lCRT.classList.toggle('on', name === 'crt');
+}
+
+// Hard-switch between QNN and OI panels — never both visible
+function showPanel(which) {
+  if (which === 'qnn') { pQNN.classList.remove('hidden'); pOI.classList.add('hidden'); }
+  else                 { pOI.classList.remove('hidden');  pQNN.classList.add('hidden'); }
+}
+
+function flashScreen() {
+  const f = document.getElementById('flash');
+  f.style.opacity = '1';
+  setTimeout(() => f.style.opacity = '0', 90);
+}
+
+function updateSegCounter() {
+  document.getElementById('segCounter').textContent =
+    'SEG ' + (videoIdx + 1) + ' / ' + PLAYLIST.length;
+}
+
+function enter(s) {
+  state      = s;
+  stateStart = performance.now();
+
+  switch (s) {
+    case 'qnn':
+      showCenter('msg');
+      showPanel('qnn');
+      qnnPhaseStart = performance.now();
+      intervalStart = performance.now();
+      document.getElementById('standbyLabel').textContent =
+        HAS_VIDEOS ? 'NEXT BROADCAST INCOMING' : 'STAND BY FOR BROADCAST';
+      break;
+
+    case 'oi':
+      showCenter('msg');
+      showPanel('oi');
+      break;
+
+    case 'vid_preroll':
+      // Show video layer with first frame frozen.
+      // muted on the <video> element guarantees autoplay when preroll ends —
+      // no play-prime hack needed, which was causing blank screen after a few cycles.
+      showCenter('vid');
+      updateSegCounter();
+      vid.src = PLAYLIST[videoIdx];
+      vid.load();
+      document.getElementById('vidTimer').textContent = '00:00';
+      vid.addEventListener('loadeddata', function onLoaded() {
+        vid.removeEventListener('loadeddata', onLoaded);
+        vid.currentTime = 0;
+      }, { once: true });
+      break;
+
+    case 'vid_intro': {
+      // Load the intro iframe. State exits ONLY via QNN_INTRO_COMPLETE postMessage.
+      // Safety timeout (18s) advances past the intro if the message never arrives.
+      const frame = document.getElementById('intro-frame');
+      frame.src = 'intro-v5.html';
+      frame.style.display = 'block';
+      setTimeout(() => {
+        if (state === 'vid_intro') { dismissIntro(); enter('vid_preroll'); }
+      }, 18000);
+      break;
+    }
+
+    case 'video':
+      // Video layer already visible from preroll — just play
+      vid.play().catch(e => console.warn('[QNN] play error:', e));
+      startVidTimer();
+      break;
+
+    case 'vid_postroll':
+      // Video layer stays visible — last frame frozen, timer stopped
+      stopVidTimer();
+      break;
+
+    case 'distort_periodic':
+    case 'distort_to_preroll':
+    case 'distort_to_oi':
+    case 'distort_to_qnn':
+      flashScreen();
+      showCenter('crt');
+      break;
+  }
+}
+
+function tick() {
+  const now = performance.now();
+
+  if (state === 'qnn') {
+    const phase = now - qnnPhaseStart;
+    const total = qnnAccum + phase;
+    const intT  = now - intervalStart;
+
+    if (total >= CFG.msgMs) {
+      qnnAccum = 0;
+      enter(HAS_VIDEOS ? 'distort_to_preroll' : 'distort_to_oi');
+    } else if (CFG.intervalMs > 0 && intT >= CFG.intervalMs) {
+      qnnAccum = total;
+      intervalStart = performance.now();
+      enter('distort_periodic');
+    }
+
+  } else if (state === 'oi') {
+    // oiMs applies in both video and no-video mode
+    if (now - stateStart >= CFG.oiMs) enter('distort_to_qnn');
+
+  } else if (state === 'vid_preroll') {
+    if (now - stateStart >= CFG.prerollMs) enter('video');
+
+  } else if (state === 'video') {
+    // video.ended (below) is the ONLY exit — videos always play to their natural end.
+
+  } else if (state === 'vid_postroll') {
+    if (now - stateStart >= CFG.postrollMs) {
+      videoIdx = (videoIdx + 1) % PLAYLIST.length;
+      // When the playlist wraps back to the beginning, silently refresh
+      // so any newly published videos are included in the next cycle
+      if (videoIdx === 0) refreshPlaylist();
+      enter('distort_to_oi');
+    }
+
+  } else if (state === 'distort_periodic') {
+    if (now - stateStart >= CFG.crtMs) enter('qnn');
+
+  } else if (state === 'distort_to_preroll') {
+    if (now - stateStart >= CFG.crtMs) enter('vid_intro'); // intro plays, then vid_preroll
+
+  } else if (state === 'distort_to_oi') {
+    if (now - stateStart >= CFG.crtMs) enter('oi');
+
+  } else if (state === 'distort_to_qnn') {
+    if (now - stateStart >= CFG.crtMs) {
+      qnnAccum = 0;
+      enter('qnn');
+    }
+  }
+}
+
+// Video finished naturally → enter postroll freeze
+vid.addEventListener('ended', () => {
+  if (state === 'video') enterPostroll();
+});
+
+// ════════════════════════════════════════════════════════
+//  INTRO INTEGRATION
+//  Listens for QNN_INTRO_COMPLETE from the intro iframe.
+//  Dismisses the iframe and proceeds to vid_preroll.
+// ════════════════════════════════════════════════════════
+function dismissIntro() {
+  const frame = document.getElementById('intro-frame');
+  frame.style.display = 'none';
+  frame.src = ''; // unload iframe to free memory
+}
+
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'QNN_INTRO_COMPLETE') {
+    if (state === 'vid_intro') {
+      dismissIntro();
+      enter('vid_preroll');
+    }
+  }
+});
+
+function enterPostroll() {
+  enter('vid_postroll');
+}
+
+function startCycle() {
+  if (tickH) clearInterval(tickH);
+  stopVidTimer();
+  qnnAccum = 0;
+  videoIdx = 0;
+  enter('qnn');
+  tickH = setInterval(tick, 100);
+}
+function stopCycle() {
+  clearInterval(tickH); tickH = null; stopVidTimer();
+}
+
+function startVidTimer() {
+  const el = document.getElementById('vidTimer');
+  if (vidTimerH) clearInterval(vidTimerH);
+  vidTimerH = setInterval(() => {
+    if (vid.duration && !isNaN(vid.duration)) {
+      const r = Math.max(0, Math.round(vid.duration - vid.currentTime));
+      el.textContent = String(Math.floor(r/60)).padStart(2,'0') + ':' + String(r%60).padStart(2,'0');
+    }
+  }, 1000);
+}
+function stopVidTimer() {
+  clearInterval(vidTimerH); vidTimerH = null;
+  vid.pause();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { vid.pause(); }
+  else if (state === 'video') vid.play().catch(e => console.warn('[QNN] resume:', e));
+  // preroll/postroll: video stays paused intentionally — no resume needed
+});
+
+// ════════════════════════════════════════════════════════
+//  CRT NOISE
+// ════════════════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('crtC'), ctx=c.getContext('2d');
+  function sz(){c.width=c.offsetWidth||800;c.height=c.offsetHeight||976;}sz();
+  function draw(){
+    const w=c.width,h=c.height,img=ctx.createImageData(w,h),d=img.data;
+    for(let i=0;i<d.length;i+=4){const v=Math.random()>.91?Math.random()*90|0:0;d[i]=v;d[i+1]=v;d[i+2]=v;d[i+3]=v?210:0;}
+    ctx.putImageData(img,0,0);requestAnimationFrame(draw);
+  }draw();
+})();
+
+// ════════════════════════════════════════════════════════
+//  PANEL NOISE
+// ════════════════════════════════════════════════════════
+function initNoise(id){
+  const c=document.getElementById(id);c.width=310;c.height=1080;
+  const ctx=c.getContext('2d');
+  function draw(){
+    const img=ctx.createImageData(310,1080),d=img.data;
+    for(let i=0;i<d.length;i+=4){const v=Math.random()>.976?180:0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=v?160:0;}
+    ctx.putImageData(img,0,0);requestAnimationFrame(draw);
+  }draw();
+}
+initNoise('pnL');initNoise('pnR');
+
+// ════════════════════════════════════════════════════════
+//  SIGNAL BARS
+// ════════════════════════════════════════════════════════
+function buildSig(id,on){
+  const el=document.getElementById(id);
+  for(let i=0;i<8;i++){const b=document.createElement('div');b.className='sbar'+(i<on?' on':'');el.appendChild(b);}
+}
+buildSig('sUp',7);buildSig('sDn',5);buildSig('sQu',6);
+
+// ════════════════════════════════════════════════════════
+//  GAUGES
+// ════════════════════════════════════════════════════════
+function animGauge(fid,v2,base){
+  setInterval(()=>{
+    const v=Math.max(5,Math.min(99,base+(Math.random()-.5)*16|0));
+    document.getElementById(fid).style.width=v+'%';
+    document.getElementById(v2).textContent=v+'%';
+  },2400);
+}
+animGauge('gCpu','gvCpu',72);animGauge('gMem','gvMem',58);
+animGauge('gNet','gvNet',34);animGauge('gEnc','gvEnc',91);
+
+// ════════════════════════════════════════════════════════
+//  SCROLLING DATA
+// ════════════════════════════════════════════════════════
+const lL=[
+  ['h','0xA3F2 0x11CC 0xBB04'],['d','PKT RECV 1.4ms LAT'],
+  ['','ROUTING: NODE 7-ALPHA'],['h','FF 3A 00 C1 D9 8E'],
+  ['w','ANOMALY @ CH.14'],['','HANDSHAKE OK :: SEC'],
+  ['d','STREAM 0x3F 2048kbps'],['b','SIG LOCKED STANTON-07'],
+  ['h','0xC900 0xAABB 0xFF01'],['','ENCRYPT ACTIVE'],
+  ['d','BURST TX: 4.2MB'],['e','RETRY #3 CH.22 TIMEOUT'],
+  ['','FALLBACK ROUTE OK'],['h','DE AD BE EF 00 11'],
+  ['d','PKT LOSS: 0.02%'],['','UPLINK :: NODE A3'],
+  ['b','QNN AUTH TOKEN REFRESHED'],['h','0xFF04 0x88DE 0x0000'],
+  ['w','SECTOR SCAN ACTIVE'],['d','QUEUE: 12 PACKETS'],
+];
+const lR=[
+  ['b','BROADCAST SESSION INIT'],['d','IDENT @ 19:41:03'],
+  ['','TERMINAL ACCESS OK'],['w','PASSIVE SCAN...'],
+  ['h','KEY: 9F2A-004E-771D'],['','VOCAL: 99.7%'],
+  ['d','RETINA: PASSED'],['','STANTON/MRT SYNC'],
+  ['b','QNN RECORDING ACTIVE'],['h','0xF1A3 → 0x00CC'],
+  ['d','BUF: 128/512MB'],['','QE-TLS v4.1'],
+  ['w','UPLINK FLUCTUATION'],['d','H.265 LOSSLESS'],
+  ['','FRAME DROP: 0.0%'],['b','CHANNEL SECURE'],
+  ['h','8B 3F C2 91 7A FF'],['d','4.8Mbps STABLE'],
+];
+const cmap={'h':'h','d':'d','b':'b','w':'w','e':'e','':''};
+function buildScroll(id,lines){
+  const el=document.getElementById(id);
+  [...lines,...lines].forEach(([c,t])=>{
+    const d=document.createElement('div');
+    d.className='dl'+(c?' '+cmap[c]:'');
+    d.textContent=t;el.appendChild(d);
+  });
+}
+buildScroll('stL',lL);buildScroll('stR',lR);
+
+// ════════════════════════════════════════════════════════
+//  HEX GRIDS
+// ════════════════════════════════════════════════════════
+function buildHex(id,n){
+  const el=document.getElementById(id),h='0123456789ABCDEF';
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div');c.className='hc';
+    c.textContent=h[Math.random()*16|0]+h[Math.random()*16|0];
+    setInterval(()=>{c.textContent=h[Math.random()*16|0]+h[Math.random()*16|0];},1800+Math.random()*2500);
+    el.appendChild(c);
+  }
+}
+buildHex('hxL',80);buildHex('hxR',80);
+
+// ════════════════════════════════════════════════════════
+//  WAVEFORM
+// ════════════════════════════════════════════════════════
+(function(){
+  const svg=document.getElementById('wave');
+  let pts=Array.from({length:55},()=>13+(Math.random()-.5)*5);
+  setInterval(()=>{
+    pts.shift();pts.push(13+(Math.random()-.5)*(Math.random()>.85?20:4));
+    const step=288/(pts.length-1);
+    const p=pts.map((y,i)=>`${(i*step).toFixed(1)},${y.toFixed(1)}`).join(' ');
+    svg.innerHTML=`<polyline points="${p}" fill="none" stroke="rgba(0,190,160,.65)" stroke-width="1"/>`;
+  },80);
+})();
+
+// ════════════════════════════════════════════════════════
+//  STATION ID FLICKER
+// ════════════════════════════════════════════════════════
+const stationIds=['QNN-STN-001','QNN-STN-007','QNN-STN-014','QNN-STN-031'];
+let si=0;
+setInterval(()=>{si=(si+1)%stationIds.length;document.getElementById('stationId').textContent=stationIds[si];},7000);
+
+// ════════════════════════════════════════════════════════
+//  CLOCK
+// ════════════════════════════════════════════════════════
+function clk(){
+  const t=[new Date().getUTCHours(),new Date().getUTCMinutes(),new Date().getUTCSeconds()]
+    .map(n=>String(n).padStart(2,'0')).join(':');
+  document.getElementById('clkP').textContent=t;
+}
+setInterval(clk,1000);clk();
+
+// ════════════════════════════════════════════════════════
+//  TICKER
+// ════════════════════════════════════════════════════════
+const tItems=[
+  'QNN BREAKING: VANDUUL INCURSION REPORTED NEAR PYRO RELAY STATION 7 — UEE PATROL RESPONSE UNDERWAY',
+  'COMMODITY MARKETS: AGRICIUM +12% FOLLOWING HURSTON MINING ACCORD · LARANITE DOWN 3% AT MICROTECH EXCHANGE',
+  'UEE SENATE SESSION DELAYED · DELIBERATIONS ON CIVILIAN CORRIDOR RIGHTS CONTINUE INTO THIRD CYCLE',
+  'ODYSSEY INTERSTELLAR — STANTON\'S PREMIER MULTI-CREW ORG — TYPE !apply IN CHAT TO BEGIN YOUR BRIEFING',
+  'SPECTRUM ADVISORY: ELEVATED CRIMINAL ACTIVITY IN CRUSADER ORBIT · AVOID DAYMAR APPROACH VECTOR DELTA',
+  'QNN EXCLUSIVE: RSI ENGINEERING CHIEF ON CONSTELLATION REDESIGN · FULL INTERVIEW NEXT BROADCAST CYCLE',
+  'ACTIVE OPS: CARGO ESCORT · MINING · BOUNTY HUNTING · SIGN-ON BONUS 5,000,000 aUEC — TYPE !apply',
+  'QUANTUM NEWS NETWORK · BROADCASTING ACROSS ALL STANTON RELAYS · STAY INFORMED · STAY SAFE',
+];
+(function(){
+  const t=document.getElementById('ttrack');
+  [...tItems,...tItems].forEach(txt=>{
+    const s=document.createElement('span');s.className='titem';s.textContent=txt;t.appendChild(s);
+    const sep=document.createElement('span');sep.className='tsep';sep.textContent='◆';t.appendChild(sep);
+  });
+})();
+
+// ════════════════════════════════════════════════════════
+//  INIT — fetch playlist.json then start the broadcast
+// ════════════════════════════════════════════════════════
+window.QNN = { startCycle, stopCycle, CFG };
+loadPlaylist(false); // starts cycle after playlist is loaded
+</script>
+</body>
+</html>
