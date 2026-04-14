@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Extract MP4 URLs from release assets
         id: get_urls
@@ -30,7 +33,6 @@ jobs:
 
       - name: Append new URLs to playlist.json
         run: |
-          # Read existing playlist (default to empty array if file missing)
           if [ -f playlist.json ]; then
             CURRENT=$(cat playlist.json)
           else
@@ -39,7 +41,6 @@ jobs:
 
           NEW_URLS='${{ steps.get_urls.outputs.result }}'
 
-          # Merge arrays, remove duplicates, keep order (existing first)
           echo "$CURRENT" | jq \
             --argjson new "$NEW_URLS" \
             '. + $new | unique' \
@@ -52,7 +53,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git add playlist.json
-          # Only commit if the file actually changed
           git diff --staged --quiet || git commit -m "chore: add ${{ github.event.release.tag_name }} videos to playlist"
-          git push
+          git push origin ${{ github.event.repository.default_branch }}
