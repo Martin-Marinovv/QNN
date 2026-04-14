@@ -36,14 +36,15 @@ jobs:
           if [ -f playlist.json ]; then
             CURRENT=$(cat playlist.json)
           else
-            CURRENT='[]'
+            CURRENT='{"active":[],"inactive":[]}'
           fi
 
           NEW_URLS='${{ steps.get_urls.outputs.result }}'
 
+          # Append to active array, deduplicate, keep inactive untouched
           echo "$CURRENT" | jq \
             --argjson new "$NEW_URLS" \
-            '. + $new | unique' \
+            '.active = (.active + $new | unique)' \
             > playlist.json
 
           echo "Updated playlist.json:"

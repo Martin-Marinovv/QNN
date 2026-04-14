@@ -298,10 +298,11 @@ rescale();
 
 // ════════════════════════════════════════════════════════
 //  PLAYLIST — loaded from playlist.json at startup.
-//  Edit playlist.json to add/remove videos — never touch
-//  this file. The playlist also refreshes automatically
-//  at the start of each new full cycle, so newly added
-//  videos are picked up without reloading the page.
+//  playlist.json uses active/inactive structure:
+//    { "active": [...], "inactive": [...] }
+//  Move a URL to "inactive" to disable it without deleting.
+//  Move it back to "active" to restore it.
+//  The playlist refreshes automatically each full cycle.
 // ════════════════════════════════════════════════════════
 let PLAYLIST   = [];
 let HAS_VIDEOS = false;
@@ -312,8 +313,10 @@ async function loadPlaylist(isRefresh) {
     // Cache-bust so GitHub Pages always serves the latest version
     const res  = await fetch('playlist.json?t=' + Date.now());
     const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      PLAYLIST   = data;
+    // Support both active/inactive structure AND legacy flat array
+    const active = Array.isArray(data) ? data : (data.active || []);
+    if (active.length > 0) {
+      PLAYLIST   = active;
       HAS_VIDEOS = true;
     } else {
       PLAYLIST   = [];
