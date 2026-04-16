@@ -1,9 +1,9 @@
 {
   "active": [
-    "https://github.com/Martin-Marinovv/OI-terminal-Uplink/releases/download/v1.0/broadcast-01.mp4",
-    "https://github.com/Martin-Marinovv/QNN/releases/download/Lory-16th/QNN_today_16th_with_Lory.mp4"
+        "https://github.com/Martin-Marinovv/QNN/releases/download/Lory-16th/QNN_today_16th_with_Lory.mp4"
   ],
   "inactive": [
-    "https://github.com/Martin-Marinovv/QNN/releases/download/Lory-breaker-station/Operation.Rock.Cracker.news_1080p.mp4"
+    "https://github.com/Martin-Marinovv/QNN/releases/download/Lory-breaker-station/Operation.Rock.Cracker.news_1080p.mp4",
+    "https://github.com/Martin-Marinovv/OI-terminal-Uplink/releases/download/v1.0/broadcast-01.mp4"
   ]
 }
